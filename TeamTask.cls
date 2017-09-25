@@ -7,7 +7,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
-'Option Explicit
+Option Explicit
 
 Private m_proj, m_template_name, m_setting_name As String
 Private isclear As Boolean
@@ -15,6 +15,7 @@ Private dict_clear As Object
 
 Private m_handler, m_acceptor, m_handle_stat, m_accept_stat, m_keyword As String
 Private m_dirname, m_filename, m_type, m_update_handle, m_update_accept, m_sheetname, m_clear_flag As String
+Private m_append As String
 
 '初始化
 Public Sub Init(proj)
@@ -38,6 +39,7 @@ Public Sub Init(proj)
     m_update_accept = GetConfig(11)
     m_sheetname = GetConfig(12)
     m_clear_flag = GetConfig(13)
+    m_append = GetConfig(14)
 End Sub
 
 '拉取任务
@@ -128,48 +130,12 @@ Private Function CopyTask(book, sheetname)
                         Next
                     End If
                     
-                    If Not found Then
+                    If Not found And NeedAppend(m_append) Then
                         src_sheet.Rows(j & ":" & j).Copy dist_sheet.Range("A" & (count + 1)) '复制到指定位置
                     End If
                 End If
             Next
         End If
-    Next
-End Function
-
-'修正任务
-Private Function ReviseTasks()
-    Dim wbook As Workbook
-    Dim src_sheet As Worksheet
-    Dim i, j, k, rowcount, count As Integer
-    
-    Dim tasks As Object
-    Set tasks = CreateObject("Scripting.Dictionary")
-    
-    Set wbook = Workbooks.Open(ThisWorkbook.Path & "\..\修正任务.xlsx")
-    For i = 1 To wbook.Sheets.count
-        Set src_sheet = wbook.Sheets(i)
-        If InStr(1, src_sheet.name, "修正") Then
-            Let rowcount = src_sheet.Range("A65536").End(xlUp).row
-            For j = 1 To rowcount
-                If src_sheet.Cells(j, 3).Value <> "内容" Then
-                    tasks.Item(src_sheet.Cells(j, 3).Value) = Trim(src_sheet.Cells(j, 6).Value)
-                End If
-            Next
-        End If
-    Next
-    wbook.Close
-    
-    Dim dist_sheet As Worksheet
-    For j = 1 To ThisWorkbook.Sheets.count
-        Set dist_sheet = ThisWorkbook.Sheets(j)
-        Let count = dist_sheet.UsedRange.Rows.count
-        For k = 1 To count
-            ' 修正任务的负责人
-            If tasks.exists(Trim(dist_sheet.Cells(k, 3).Value)) Then
-                dist_sheet.Cells(k, 6).Value = tasks.Item(Trim(dist_sheet.Cells(k, 3).Value))
-            End If
-        Next
     Next
 End Function
 
@@ -200,6 +166,16 @@ Private Function NeedClearSheet(flag) As Boolean
         Let ret = True
     End If
     NeedClearSheet = ret
+End Function
+
+'是否追加新的行
+Private Function NeedAppend(flag) As Boolean
+    Dim ret As Boolean
+    Let ret = False
+    If Trim(flag) = "是" Then
+        Let ret = True
+    End If
+    NeedAppend = ret
 End Function
 
 '过滤表头
@@ -322,5 +298,4 @@ End Function
 Private Function GetOtherCustomConfig(col, row, wbook) As String
     GetOtherCustomConfig = Trim(wbook.Sheets(m_setting_name).Range(col & row).Value)
 End Function
-
 
